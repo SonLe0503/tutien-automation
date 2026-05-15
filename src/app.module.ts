@@ -1,0 +1,22 @@
+import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { PrismaModule } from './prisma/prisma.module';
+import { ChaptersModule } from './chapters.module';
+import { SummarizeModule } from './summarize/summarize.module';
+import { TelegramModule } from './telegram/telegram.module';
+import { CronService } from './cron/cron.service';
+
+@Module({
+  imports: [
+    ScheduleModule.forRoot(),
+    PrismaModule,
+    SummarizeModule,
+    TelegramModule,
+    ChaptersModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService, CronService],
+})
+export class AppModule {}
