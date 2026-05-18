@@ -53,6 +53,11 @@ ${summary}
     return this.prisma.chapter.findMany();
   }
 
+  async findAllSourceUrls(): Promise<string[]> {
+    const rows = await this.prisma.chapter.findMany({ select: { sourceUrl: true } });
+    return rows.map((r) => r.sourceUrl);
+  }
+
   async findOne(id: number) {
     return this.prisma.chapter.findUnique({
       where: { id },

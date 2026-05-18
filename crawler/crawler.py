@@ -3,14 +3,14 @@ import time
 import re
 from bs4 import BeautifulSoup
 
-STORY_URL = "http://vietnamthuquan.eu/truyen/truyen.aspx?tid=2qtqv3m3237n1nnntn2nnn31n343tq83a3q3m3237nvn"
-CHAPTER_API = "http://vietnamthuquan.eu/truyen/chuonghoi_moi.aspx?"
 NESTJS_API = "http://localhost:3000/chapters"
-RESPONSE_SEPARATOR = "--!!tach_noi_dung!!--"
+NESTJS_SOURCE_URLS_API = "http://localhost:3000/chapters/source-urls"
+NESTJS_STORIES_API = "http://localhost:3000/stories/active"
 
-# Số chương mới nhất cần crawl mỗi lần chạy (cron mode)
-CRAWL_LIMIT = 5
+BATCH_SIZE = 1
 
+
+# ─── Session ─────────────────────────────────────────────────────────────────
 
 def make_session():
     session = requests.Session()
@@ -23,16 +23,47 @@ def make_session():
     return session
 
 
-def get_chapter_list(session):
-    """Fetch story page và trả về list chapters [{tuaid, chuongid, title, label}]"""
-    resp = session.get(STORY_URL, timeout=25, allow_redirects=True)
+# ─── NestJS helpers ───────────────────────────────────────────────────────────
+
+def get_saved_source_urls():
+    try:
+        resp = requests.get(NESTJS_SOURCE_URLS_API, timeout=10)
+        resp.raise_for_status()
+        return set(resp.json())
+    except Exception as e:
+        print(f"[crawler] Warning: could not fetch saved URLs ({e})")
+        return set()
+
+
+def get_active_stories():
+    try:
+        resp = requests.get(NESTJS_STORIES_API, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        print(f"[crawler] Warning: could not fetch stories ({e})")
+        return []
+
+
+def save_chapter(chapter_data):
+    resp = requests.post(NESTJS_API, json=chapter_data, timeout=15)
+    return resp.status_code, resp.text
+
+
+# ─── Parser: vietnamthuquan ───────────────────────────────────────────────────
+
+VTQ_CHAPTER_API = "http://vietnamthuquan.eu/truyen/chuonghoi_moi.aspx?"
+VTQ_SEPARATOR = "--!!tach_noi_dung!!--"
+
+
+def vtq_get_chapter_list(session, story):
+    resp = session.get(story["indexUrl"], timeout=25, allow_redirects=True)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
     chapters = []
     for li in soup.find_all("li", onclick=True):
-        onclick = li.get("onclick", "")
-        m = re.search(r"tuaid=(\d+)&chuongid=(\d+)", onclick)
+        m = re.search(r"tuaid=(\d+)&chuongid=(\d+)", li.get("onclick", ""))
         if not m:
             continue
         tuaid = m.group(1)
@@ -40,95 +71,169 @@ def get_chapter_list(session):
         acronym = li.find_parent("acronym")
         title = acronym.get("title", "") if acronym else ""
         label = li.find("a").text.strip() if li.find("a") else f"Chương {chuongid}"
+        source_url = f"http://vietnamthuquan.eu/truyen/{tuaid}/chuong-{chuongid}"
         chapters.append({
-            "tuaid": tuaid,
-            "chuongid": chuongid,
-            "title": title,
-            "label": label,
+            "tuaid": tuaid, "chuongid": chuongid,
+            "title": title, "label": label,
+            "sourceUrl": source_url,
         })
-
     return chapters
 
 
-def fetch_chapter_content(session, tuaid, chuongid):
-    """Gọi AJAX API và trả về (title, content)"""
+def vtq_fetch_content(session, story, chapter):
     resp = session.post(
-        CHAPTER_API,
-        data=f"tuaid={tuaid}&chuongid={chuongid}",
+        VTQ_CHAPTER_API,
+        data=f"tuaid={chapter['tuaid']}&chuongid={chapter['chuongid']}",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Referer": STORY_URL,
+            "Referer": story["indexUrl"],
             "X-Requested-With": "XMLHttpRequest",
         },
         timeout=20,
     )
     resp.raise_for_status()
-
-    parts = resp.text.split(RESPONSE_SEPARATOR)
+    parts = resp.text.split(VTQ_SEPARATOR)
     if len(parts) < 3:
-        raise ValueError(f"Unexpected response format: {len(parts)} parts")
-
-    # Part 1: title block, Part 2: content
-    title_soup = BeautifulSoup(parts[1], "html.parser")
-    content_soup = BeautifulSoup(parts[2], "html.parser")
-
-    title = title_soup.get_text(separator=" ", strip=True)
-    content = content_soup.get_text(separator="\n", strip=True)
-    return title, content
+        raise ValueError(f"Unexpected VTQ response: {len(parts)} parts")
+    content = BeautifulSoup(parts[2], "html.parser").get_text(separator="\n", strip=True)
+    full_title = f"{chapter['label']} — {chapter['title']}" if chapter["title"] else chapter["label"]
+    return full_title, content
 
 
-def chapter_source_url(tuaid, chuongid):
-    return f"http://vietnamthuquan.eu/truyen/23543/chuong-{chuongid}"
+# ─── Parser: truyenfull ───────────────────────────────────────────────────────
+
+def truyenfull_get_chapter_list(session, story):
+    resp = session.get(story["indexUrl"], timeout=20)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    max_chap = 0
+    for a in soup.find_all("a", href=True):
+        m = re.search(r"chuong-(\d+)", a["href"])
+        if m:
+            max_chap = max(max_chap, int(m.group(1)))
+
+    slug_m = re.search(r"truyenfull\.today/([^/]+)/", story["indexUrl"])
+    slug = slug_m.group(1) if slug_m else "truyen"
+
+    chapters = []
+    for i in range(1, max_chap + 1):
+        source_url = f"https://truyenfull.today/{slug}/chuong-{i}/"
+        chapters.append({"chuongid": i, "slug": slug, "sourceUrl": source_url})
+    return chapters
 
 
-def save_chapter(chapter_data):
-    """POST chapter lên NestJS API"""
-    resp = requests.post(NESTJS_API, json=chapter_data, timeout=15)
-    return resp.status_code, resp.text
+def truyenfull_fetch_content(session, story, chapter):
+    resp = session.get(chapter["sourceUrl"], timeout=20)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    content_el = soup.find(id="chapter-c") or soup.find(class_="chapter-c")
+    if not content_el:
+        raise ValueError("Content element not found")
+
+    title_tag = soup.find("title")
+    full_title = title_tag.text.strip().split(" - ")[0] if title_tag else f"Chương {chapter['chuongid']}"
+    content = content_el.get_text(separator="\n", strip=True)
+    return full_title, content
 
 
-def crawl_latest(limit=CRAWL_LIMIT):
-    print(f"[crawler] Starting crawl — limit={limit}")
-    session = make_session()
+# ─── Dispatcher ──────────────────────────────────────────────────────────────
 
-    print("[crawler] Fetching chapter list...")
-    chapters = get_chapter_list(session)
-    print(f"[crawler] Found {len(chapters)} chapters total")
+PARSERS = {
+    "vietnamthuquan": (vtq_get_chapter_list, vtq_fetch_content),
+    "truyenfull": (truyenfull_get_chapter_list, truyenfull_fetch_content),
+}
 
-    # Crawl `limit` chapters mới nhất (cuối list)
-    targets = chapters[-limit:]
+
+def crawl_story(session, story, saved_urls):
+    domain = story["domain"]
+    if domain not in PARSERS:
+        print(f"[crawler] Unknown domain '{domain}' for story '{story['name']}', skipping")
+        return
+
+    get_list, fetch_content = PARSERS[domain]
+
+    print(f"[crawler] [{story['name']}] Fetching chapter list...")
+    chapters = get_list(session, story)
+    print(f"[crawler] [{story['name']}] Total: {len(chapters)} | In DB: {len(saved_urls)}")
+
+    unsaved = [ch for ch in chapters if ch["sourceUrl"] not in saved_urls]
+    targets = unsaved[:BATCH_SIZE]
+    print(f"[crawler] [{story['name']}] Unsaved: {len(unsaved)} | Crawling: {len(targets)}")
+
+    if not targets:
+        print(f"[crawler] [{story['name']}] Nothing new.")
+        return
 
     saved = 0
     skipped = 0
     for ch in targets:
-        source_url = chapter_source_url(ch["tuaid"], ch["chuongid"])
         try:
-            title, content = fetch_chapter_content(session, ch["tuaid"], ch["chuongid"])
-            full_title = f"{ch['label']} — {ch['title']}" if ch["title"] else ch["label"]
-
+            title, content = fetch_content(session, story, ch)
             status, body = save_chapter({
-                "title": full_title,
+                "title": title,
                 "content": content,
-                "sourceUrl": source_url,
+                "sourceUrl": ch["sourceUrl"],
+                "storyId": story["id"],
             })
-
             if status == 201:
-                print(f"[crawler] Saved: {full_title}")
-                saved += 1
-            elif status == 200:
-                print(f"[crawler] Updated: {full_title}")
+                print(f"[crawler]   + {title[:70]}")
                 saved += 1
             else:
-                print(f"[crawler] Failed ({status}): {full_title} — {body[:100]}")
+                print(f"[crawler]   x ({status}) {title[:60]} — {body[:80]}")
                 skipped += 1
-
         except Exception as e:
-            print(f"[crawler] Error on chuongid={ch['chuongid']}: {e}")
+            print(f"[crawler]   x Error chuongid={ch.get('chuongid')}: {e}")
             skipped += 1
+        time.sleep(1)
 
-        time.sleep(1)  # rate limit
+    print(f"[crawler] [{story['name']}] Done — saved={saved} skipped={skipped}")
 
-    print(f"[crawler] Done — saved={saved} skipped={skipped}")
+
+# ─── Main ─────────────────────────────────────────────────────────────────────
+
+def group_by_book(stories):
+    """Group stories theo bookSlug, sort mỗi group theo priority."""
+    groups = {}
+    for s in stories:
+        book = s.get("bookSlug", s["slug"])
+        groups.setdefault(book, []).append(s)
+    for book in groups:
+        groups[book].sort(key=lambda s: s.get("priority", 1))
+    return groups
+
+
+def crawl_latest():
+    print("[crawler] Starting crawl")
+    session = make_session()
+
+    stories = get_active_stories()
+    if not stories:
+        print("[crawler] No active stories found.")
+        return
+
+    saved_urls = get_saved_source_urls()
+    book_groups = group_by_book(stories)
+    print(f"[crawler] Books: {len(book_groups)} | Sources: {len(stories)}")
+
+    for book_slug, sources in book_groups.items():
+        print(f"\n[crawler] Book: {book_slug}")
+        success = False
+        for source in sources:
+            label = f"{source['name']} (priority={source.get('priority',1)})"
+            try:
+                crawl_story(session, source, saved_urls)
+                success = True
+                break  # primary ok, không cần fallback
+            except Exception as e:
+                print(f"[crawler]   ! {label} failed: {e}")
+                print(f"[crawler]   > Trying next source...")
+
+        if not success:
+            print(f"[crawler]   !! All sources failed for book '{book_slug}'")
+
+    print("\n[crawler] All books processed.")
 
 
 if __name__ == "__main__":

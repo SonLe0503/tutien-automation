@@ -3,4 +3,5 @@ export class CreateChapterDto {
   content: string;
   summary?: string;
   sourceUrl: string;
+  storyId?: number;
 }

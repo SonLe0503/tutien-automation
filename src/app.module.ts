@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ChaptersModule } from './chapters.module';
 import { SummarizeModule } from './summarize/summarize.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { StoriesModule } from './stories/stories.module';
 import { CronService } from './cron/cron.service';
 
 @Module({
@@ -15,6 +16,7 @@ import { CronService } from './cron/cron.service';
     SummarizeModule,
     TelegramModule,
     ChaptersModule,
+    StoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService, CronService],

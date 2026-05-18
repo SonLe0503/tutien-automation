@@ -17,6 +17,11 @@ export class ChaptersController {
     return this.chaptersService.findAll();
   }
 
+  @Get('source-urls')
+  findAllSourceUrls() {
+    return this.chaptersService.findAllSourceUrls();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.chaptersService.findOne(+id);
