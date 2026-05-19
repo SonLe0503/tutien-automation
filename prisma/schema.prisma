@@ -27,6 +27,7 @@ model Chapter {
   content   String
   summary   String?
   sourceUrl String   @unique
+  audioPath String?
   createdAt DateTime @default(now())
   storyId   Int?
   story     Story?   @relation(fields: [storyId], references: [id])
