@@ -7,6 +7,7 @@ import { ChaptersModule } from './chapters.module';
 import { SummarizeModule } from './summarize/summarize.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { StoriesModule } from './stories/stories.module';
+import { VideosModule } from './videos/videos.module';
 import { CronService } from './cron/cron.service';
 
 @Module({
@@ -17,7 +18,9 @@ import { CronService } from './cron/cron.service';
     TelegramModule,
     ChaptersModule,
     StoriesModule,
+    VideosModule,
   ],
+
   controllers: [AppController],
   providers: [AppService, CronService],
 })

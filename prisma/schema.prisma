@@ -17,6 +17,7 @@ model Story {
   tuaid     String?
   priority  Int       @default(1)
   active    Boolean   @default(true)
+  topic     String    @default("TUTIEN")
   createdAt DateTime  @default(now())
   chapters  Chapter[]
 }
@@ -28,7 +29,9 @@ model Chapter {
   summary   String?
   sourceUrl String   @unique
   audioPath String?
+  videoPath String?
   createdAt DateTime @default(now())
   storyId   Int?
   story     Story?   @relation(fields: [storyId], references: [id])
 }
+

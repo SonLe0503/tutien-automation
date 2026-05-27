@@ -27,6 +27,16 @@ export class ChaptersController {
     return this.chaptersService.findOne(+id);
   }
 
+  @Post(':id/render')
+  render(@Param('id') id: string, @Body() body: any) {
+    return this.chaptersService.renderVideo(+id, body);
+  }
+
+  @Post(':id/send-audio')
+  sendAudio(@Param('id') id: string) {
+    return this.chaptersService.sendAudio(+id);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateChapterDto: UpdateChapterDto) {
     return this.chaptersService.update(+id, updateChapterDto);

@@ -45,4 +45,23 @@ export class TelegramService {
       console.error('Error sending Telegram audio:', error);
     }
   }
+
+  async sendVideo(videoPath: string, caption: string) {
+    if (!this.bot || !this.chatId) {
+      console.warn('Telegram Bot not configured. Skipping video.');
+      return;
+    }
+
+    try {
+      console.log(`[TelegramService] Sending video ${videoPath} to Telegram...`);
+      await this.bot.sendVideo(
+        this.chatId,
+        fs.createReadStream(videoPath),
+        { caption, parse_mode: 'HTML' },
+      );
+    } catch (error) {
+      console.error('Error sending Telegram video:', error);
+    }
+  }
 }
+

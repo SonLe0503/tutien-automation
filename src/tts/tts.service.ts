@@ -15,7 +15,7 @@ export class TtsService {
     this.voiceId = process.env.MINIMAX_VOICE_ID ?? '';
   }
 
-  async synthesize(text: string): Promise<Buffer> {
+  async synthesize(text: string, speed: number = 1.0): Promise<Buffer> {
     if (!this.apiKey || !this.voiceId) {
       throw new Error('GENMAX_API_KEY or MINIMAX_VOICE_ID not set');
     }
@@ -23,18 +23,18 @@ export class TtsService {
     const chunks = this.chunkText(text);
     const buffers: Buffer[] = [];
     for (const chunk of chunks) {
-      buffers.push(await this.callApi(chunk));
+      buffers.push(await this.callApi(chunk, speed));
     }
     return Buffer.concat(buffers);
   }
 
-  private async callApi(text: string): Promise<Buffer> {
+  private async callApi(text: string, speed: number = 1.0): Promise<Buffer> {
     const body = JSON.stringify({
       text,
       model_id: 'speech-2.8-turbo',
       provider: 'minimax',
       language_code: 'Vietnamese',
-      voice_settings: { speed: 1.0, pitch: 0, vol: 1.0 },
+      voice_settings: { speed, pitch: 0, vol: 1.0 },
     });
 
     const { statusCode, contentType, buf } = await this.httpRequest({
