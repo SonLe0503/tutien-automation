@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sức Khoẻ 360 Video</title>
-  <!-- Google Fonts: Inter and Outfit -->
+  <!-- Google Fonts: Montserrat for bold impact, Fredoka for friendly rounded looks, Outfit for clean look -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Fredoka:wght@600;700&family=Outfit:wght@400;600;800;900&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
   <!-- GSAP for frame-accurate rendering -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   
@@ -16,9 +16,8 @@
       --primary: #10B981; /* Emerald green */
       --secondary: #34D399;
       --accent: #FBBF24; /* Amber yellow for highlight */
-      --bg-dark: #0A0F0D;
+      --bg-dark: #000000;
       --text: #FFFFFF;
-      --card-bg: rgba(16, 20, 18, 0.45);
     }
 
     * {
@@ -37,156 +36,151 @@
       position: relative;
     }
 
-    /* Ambient background gradient animation */
+    /* Ambient background gradient shown during load or transition gaps */
     .bg-mesh {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: radial-gradient(circle at 20% 30%, #064e3b 0%, transparent 40%),
-                  radial-gradient(circle at 80% 70%, #022c22 0%, transparent 50%),
-                  radial-gradient(circle at 50% 50%, #111827 0%, transparent 60%);
+      background: radial-gradient(circle at 50% 50%, #064e3b 0%, #022c22 50%, #000000 100%);
       z-index: 1;
       filter: blur(10px);
     }
 
-    /* Elegant grid lines for structure */
     .bg-grid {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-      background-size: 60px 60px;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 80px 80px;
       z-index: 2;
     }
 
-    /* Header Container */
-    .header {
+    /* Fullscreen Dynamic Media Viewport */
+    .media-container {
       position: absolute;
-      top: 150px;
+      top: 0;
       left: 0;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      z-index: 10;
+      width: 1080px;
+      height: 1920px;
+      background-color: #000000;
+      z-index: 5;
+      overflow: hidden;
     }
 
-    .logo-container {
-      width: 120px;
-      height: 120px;
-      background: rgba(16, 185, 129, 0.15);
-      border: 2px solid rgba(16, 185, 129, 0.3);
+    .media-container img, .media-container video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transform: scale(1.05);
+    }
+
+    /* Elegant spinning watermark circular text logo in top-left */
+    .watermark-container {
+      position: absolute;
+      top: 100px;
+      left: 80px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 40;
+      background: rgba(0, 0, 0, 0.45);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      padding: 14px 28px;
+      border-radius: 50px;
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .watermark-logo {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(10px);
-      margin-bottom: 25px;
-      box-shadow: 0 0 40px rgba(16, 185, 129, 0.2);
+      font-size: 28px;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+      animation: watermark-pulse 2s infinite alternate ease-in-out;
     }
 
-    .logo-icon {
-      font-size: 55px;
-      color: var(--secondary);
-    }
-
-    .brand-title {
-      font-size: 38px;
-      font-weight: 800;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.9);
-      text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    }
-
-    .brand-subtitle {
-      font-family: 'Playfair Display', serif;
-      font-style: italic;
-      font-size: 26px;
-      color: var(--secondary);
-      margin-top: 5px;
-    }
-
-    /* Glassmorphic Main Card */
-    .card {
-      position: absolute;
-      top: 480px;
-      left: 80px;
-      width: 920px;
-      height: 1000px;
-      background: var(--card-bg);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 40px;
-      backdrop-filter: blur(30px);
-      -webkit-backdrop-filter: blur(30px);
-      z-index: 10;
-      padding: 60px 50px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
-    }
-
-    /* Video Topic Badge */
-    .badge {
-      font-size: 22px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 3px;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: #000;
-      padding: 10px 24px;
-      border-radius: 20px;
-      margin-bottom: 40px;
-    }
-
-    /* Captions/Subtitle Container */
-    .caption-container {
-      width: 100%;
-      text-align: center;
-      font-size: 64px;
+    .watermark-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
       font-weight: 900;
-      line-height: 1.45;
+      color: #FFFFFF;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    @keyframes watermark-pulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.1); }
+    }
+
+    /* Centered High-Contrast Karaok Subtitles Overlay */
+    .caption-container {
+      position: absolute;
+      bottom: 480px;
+      left: 60px;
+      width: 960px;
+      text-align: center;
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       align-content: center;
-      gap: 16px 20px;
+      gap: 18px 24px;
+      z-index: 30;
+      pointer-events: none;
     }
 
-    /* Styled individual words */
+    /* Styled individual words with maximum contrast shadow outline */
     .word {
-      color: rgba(255, 255, 255, 0.6);
-      transition: color 0.1s ease, transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      color: #FFFFFF;
+      font-family: 'Outfit', sans-serif;
+      font-size: 74px;
+      font-weight: 900;
+      line-height: 1.35;
+      text-transform: uppercase;
       display: inline-block;
-      text-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      transition: color 0.08s ease, transform 0.12s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      text-shadow: 
+        -4px -4px 0 #000,  
+         4px -4px 0 #000,
+        -4px  4px 0 #000,
+         4px  4px 0 #000,
+        -6px  0px 0 #000,
+         6px  0px 0 #000,
+         0px -6px 0 #000,
+         0px  6px 0 #000,
+         0 10px 20px rgba(0, 0, 0, 0.85);
     }
 
-    /* Highlight class for current word */
+    /* Active highlighted word */
     .word.active {
       color: var(--accent);
       transform: scale(1.18);
-      text-shadow: 0 0 30px rgba(251, 191, 36, 0.6);
-    }
-
-    /* Footer Branding */
-    .footer {
-      position: absolute;
-      bottom: 120px;
-      left: 0;
-      width: 100%;
-      text-align: center;
-      font-size: 24px;
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.4);
-      letter-spacing: 2px;
-      z-index: 10;
+      text-shadow: 
+        -4px -4px 0 #000,  
+         4px -4px 0 #000,
+        -4px  4px 0 #000,
+         4px  4px 0 #000,
+        -6px  0px 0 #000,
+         6px  0px 0 #000,
+         0px -6px 0 #000,
+         0px  6px 0 #000,
+         0 0 35px rgba(251, 191, 36, 0.8),
+         0 12px 24px rgba(0, 0, 0, 0.9);
     }
 
     /* Premium Progress Bar at bottom */
@@ -195,44 +189,38 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      height: 15px;
-      background: rgba(255, 255, 255, 0.05);
-      z-index: 10;
+      height: 16px;
+      background: rgba(255, 255, 255, 0.08);
+      z-index: 45;
     }
 
     .progress-bar {
       width: 0%;
       height: 100%;
       background: linear-gradient(90deg, var(--primary), var(--secondary));
-      box-shadow: 0 0 20px var(--primary);
+      box-shadow: 0 0 25px var(--primary);
     }
   </style>
 </head>
-<body data-composition-id="health-short" data-width="1080" data-height="1920">
+<body data-composition-id="health-short" data-width="1080" data-height="1920" data-duration="10">
 
-  <!-- Core background visuals -->
+  <!-- Background visual structure -->
   <div class="bg-mesh"></div>
   <div class="bg-grid"></div>
 
-  <!-- Header Section -->
-  <div class="header">
-    <div class="logo-container">
-      <div class="logo-icon">🌿</div>
-    </div>
-    <div class="brand-title">Sức Khoẻ 360</div>
-    <div class="brand-subtitle">Bí Quyết Sống Khoẻ Mỗi Ngày</div>
+  <!-- Fullscreen Dynamic Media Viewport -->
+  <div class="media-container" id="media-box"></div>
+
+  <!-- Elegant Logo Watermark -->
+  <div class="watermark-container">
+    <div class="watermark-logo">🌿</div>
+    <div class="watermark-text">@suckhoe360</div>
   </div>
 
-  <!-- Main Subtitle Card -->
-  <div class="card">
-    <div class="badge" id="video-tag">Mẹo Sức Khoẻ</div>
-    <div class="caption-container" id="caption-box">
-      <!-- Words will be injected here dynamically -->
-    </div>
+  <!-- Subtitles directly overlaying the full-screen background -->
+  <div class="caption-container" id="caption-box">
+    <!-- Words will be injected here dynamically -->
   </div>
-
-  <!-- Footer Branding -->
-  <div class="footer">@suckhoe360 · Bấm để xem thêm</div>
 
   <!-- Progress Bar -->
   <div class="progress-bar-container">
@@ -242,13 +230,58 @@
   <!-- Audios will be added dynamically by the server -->
 
   <script>
-    // These values will be replaced dynamically by NestJS VideosService
+    // Replaced dynamically by NestJS VideosService
     window.__wordsData = [
       /* INJECT_WORDS_DATA */
+    ];
+    window.__scenesData = [
+      /* INJECT_SCENES_DATA */
     ];
     window.__videoDuration = 10; // Default fallback, replaced by server
 
     const captionBox = document.getElementById('caption-box');
+    const mediaBox = document.getElementById('media-box');
+
+    // Highly reliable, ultra-fast CDNs for fallback images (1080x1920)
+    const fallbacks = [
+      "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=1080&auto=format&fit=crop", // yoga / fitness
+      "https://images.unsplash.com/photo-1511295742364-92767fa62d9f?q=80&w=1080&auto=format&fit=crop", // sleep / bed
+      "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1080&auto=format&fit=crop", // salad / diet
+      "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=1080&auto=format&fit=crop", // zen / meditation
+      "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?q=80&w=1080&auto=format&fit=crop", // water glass
+      "https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?q=80&w=1080&auto=format&fit=crop", // running / exercise
+      "https://images.unsplash.com/photo-1501854140801-50d01698950b?q=80&w=1080&auto=format&fit=crop"  // nature / breathing
+    ];
+
+    function createMediaElement(url, idAttr) {
+      const isVideo = url.toLowerCase().endsWith('.mp4') || url.includes('/video/') || url.includes('mixkit.co');
+      if (isVideo) {
+        const video = document.createElement('video');
+        video.src = url;
+        video.id = idAttr;
+        video.preload = "auto";
+        video.muted = true;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.setAttribute('crossorigin', 'anonymous');
+        return video;
+      } else {
+        const img = document.createElement('img');
+        img.src = url;
+        img.id = idAttr;
+        img.setAttribute('crossorigin', 'anonymous');
+        return img;
+      }
+    }
+
+    // Populate media into the single fullscreen box
+    if (window.__scenesData && window.__scenesData.length > 0) {
+      window.__scenesData.forEach((scene, sIdx) => {
+        const mediaUrl = scene.imageUrl || fallbacks[sIdx % fallbacks.length];
+        const el = createMediaElement(mediaUrl, `media-el-${sIdx}`);
+        mediaBox.appendChild(el);
+      });
+    }
 
     // 1. Render all words in the container
     if (window.__wordsData && window.__wordsData.length > 0) {
@@ -260,7 +293,7 @@
         captionBox.appendChild(span);
       });
     } else {
-      captionBox.innerHTML = '<span style="color: white; font-size: 40px;">Bí quyết sống khỏe...</span>';
+      captionBox.innerHTML = '<span class="word active" style="font-family:\'Montserrat\',sans-serif">Bí quyết sống khỏe...</span>';
     }
 
     // 2. Build GSAP timeline for deterministic, frame-accurate animation
@@ -272,17 +305,65 @@
         const elementId = `#word-${idx}`;
         const duration = w.end - w.start;
 
-        // Highlight at start time
         mainTimeline.to(elementId, {
           className: 'word active',
-          duration: 0.05,
+          duration: 0.04,
         }, w.start);
 
-        // De-highlight at end time
         mainTimeline.to(elementId, {
           className: 'word',
-          duration: 0.05,
+          duration: 0.04,
         }, w.end);
+      });
+    }
+
+    // Scene Transition animations (fully dynamic full-screen Ken Burns & transitions)
+    if (window.__scenesData && window.__scenesData.length > 0) {
+      window.__scenesData.forEach((scene, sIdx) => {
+        const el = document.getElementById(`media-el-${sIdx}`);
+        if (!el) return;
+
+        // Set initial state
+        gsap.set(el, { opacity: 0, scale: 1.05 });
+
+        // Fade + zoom in active scene media
+        mainTimeline.to(el, {
+          opacity: 1,
+          scale: 1.08,
+          duration: 0.5,
+          ease: 'power2.out'
+        }, scene.start);
+
+        // Ken Burns effect: continuous subtle scale and panning over scene duration
+        const sceneDur = scene.end - scene.start;
+        mainTimeline.to(el, {
+          scale: 1.18,
+          x: sIdx % 2 === 0 ? '-2%' : '2%',
+          y: '-1%',
+          duration: sceneDur,
+          ease: 'none'
+        }, scene.start);
+
+        // Frame-accurate video playhead sync inside the GSAP master timeline
+        if (el.tagName === 'VIDEO') {
+          mainTimeline.fromTo(el, {
+            currentTime: 0
+          }, {
+            currentTime: Math.min(sceneDur, 30),
+            ease: 'none',
+            duration: sceneDur
+          }, scene.start);
+        }
+
+        // Fade out at end of scene (unless it's the last one)
+        if (sIdx < window.__scenesData.length - 1) {
+          mainTimeline.to(el, {
+            opacity: 0,
+            scale: 0.98,
+            duration: 0.5,
+            ease: 'power2.in'
+          }, scene.end - 0.2); // slight crossfade overlap
+        }
       });
     }
 

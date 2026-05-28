@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pagination, Input, Select } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { VideoList } from '@/features/videos/components/VideoList';
@@ -11,6 +11,7 @@ interface VideoGalleryPageProps {
   getMediaUrl: (filename: string | null, type: 'audio' | 'video') => string | null;
   onRenderVideo?: (id: number) => Promise<void>;
   onSendAudio?: (id: number) => Promise<void>;
+  onSendVideo?: (id: number) => Promise<void>;
 }
 
 export const VideoGalleryPage: React.FC<VideoGalleryPageProps> = ({
@@ -20,8 +21,18 @@ export const VideoGalleryPage: React.FC<VideoGalleryPageProps> = ({
   getMediaUrl,
   onRenderVideo,
   onSendAudio,
+  onSendVideo,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    const saved = localStorage.getItem('galleryCurrentPage');
+    const parsed = saved ? parseInt(saved, 10) : 1;
+    return isNaN(parsed) ? 1 : parsed;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('galleryCurrentPage', String(currentPage));
+  }, [currentPage]);
+
   const [searchText, setSearchText] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<'ALL' | 'HEALTH' | 'TUTIEN'>('ALL');
   const [selectedMediaType, setSelectedMediaType] = useState<'ALL' | 'VIDEO' | 'AUDIO' | 'NONE'>('ALL');
@@ -54,6 +65,13 @@ export const VideoGalleryPage: React.FC<VideoGalleryPageProps> = ({
 
   // Calculate total pages for filtered items
   const totalPages = Math.ceil(filteredChapters.length / pageSize);
+
+  // Safeguard: Reset currentPage if it exceeds totalPages
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   // Get current chapters for page
   const startIndex = (currentPage - 1) * pageSize;
@@ -130,6 +148,7 @@ export const VideoGalleryPage: React.FC<VideoGalleryPageProps> = ({
         getMediaUrl={getMediaUrl}
         onRenderVideo={onRenderVideo}
         onSendAudio={onSendAudio}
+        onSendVideo={onSendVideo}
       />
 
       {/* Pagination Controls */}

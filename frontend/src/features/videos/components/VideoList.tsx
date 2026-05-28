@@ -9,6 +9,7 @@ interface VideoListProps {
   getMediaUrl: (filename: string | null, type: 'audio' | 'video') => string | null;
   onRenderVideo?: (id: number) => Promise<void>;
   onSendAudio?: (id: number) => Promise<void>;
+  onSendVideo?: (id: number) => Promise<void>;
 }
 
 export const VideoList: React.FC<VideoListProps> = ({
@@ -18,6 +19,7 @@ export const VideoList: React.FC<VideoListProps> = ({
   getMediaUrl,
   onRenderVideo,
   onSendAudio,
+  onSendVideo,
 }) => {
   if (chapters.length === 0) {
     return (
@@ -39,6 +41,7 @@ export const VideoList: React.FC<VideoListProps> = ({
           getMediaUrl={getMediaUrl}
           onRenderVideo={onRenderVideo}
           onSendAudio={onSendAudio}
+          onSendVideo={onSendVideo}
         />
       ))}
     </div>

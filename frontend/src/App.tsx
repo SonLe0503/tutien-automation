@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ConfigProvider, theme, Button } from 'antd';
 import { SendOutlined, EditOutlined, VideoCameraOutlined } from '@ant-design/icons';
-import { getChapters, getStories, createChapter, deleteChapter, renderChapterVideo, sendChapterAudio } from '@/features/videos/api';
+import { getChapters, getStories, createChapter, deleteChapter, renderChapterVideo, sendChapterAudio, sendChapterVideo } from '@/features/videos/api';
 import { VideoPlayerModal } from '@/features/videos/components';
 import { ScriptCreatorPage, VideoGalleryPage } from '@/features/videos/pages';
 import type { Chapter, Story } from '@/features/videos/types';
@@ -12,7 +12,10 @@ const API_BASE = import.meta.env.VITE_API_BASE;
 function App() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
-  const [activeTab, setActiveTab] = useState<'creator' | 'gallery'>('creator');
+  const [activeTab, setActiveTab] = useState<'creator' | 'gallery'>(() => {
+    const saved = localStorage.getItem('activeTab');
+    return (saved === 'creator' || saved === 'gallery') ? saved : 'creator';
+  });
   
   // Loading & Feedback States
   const [loading, setLoading] = useState(false);
@@ -38,6 +41,10 @@ function App() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
 
   // 2. Handle Chapter Creation via API Service
   const handleCreate = async (payload: any) => {
@@ -94,7 +101,7 @@ function App() {
       const updatedChapter = await renderChapterVideo(id);
       console.log('Successfully manual rendered:', updatedChapter);
 
-      setLoadingStep('Hoàn thành xuất sắc! Đã render video và gửi lên Telegram thành công! 🎉');
+      setLoadingStep('Hoàn thành xuất sắc! Đã render video thành công! 🎉');
       
       // Reload list
       await fetchData();
@@ -123,11 +130,22 @@ function App() {
     }
   };
 
+  // 3.7. Handle Manual Video Send to Telegram (HEALTH)
+  const handleSendVideo = async (id: number) => {
+    try {
+      await sendChapterVideo(id);
+      alert('✅ Đã gửi video lên Telegram thành công!');
+    } catch (err: any) {
+      console.error(err);
+      alert('Đã xảy ra lỗi khi gửi video: ' + err.message);
+    }
+  };
+
   // 4. Helper to get clean media path
   const getMediaUrl = (filename: string | null, type: 'audio' | 'video') => {
     if (!filename) return null;
     const basename = filename.split('/').pop();
-    return `${API_BASE}/${type === 'audio' ? 'audio' : 'output'}/${basename}`;
+    return `${API_BASE}/${type === 'audio' ? 'audio' : 'output'}/${basename}?t=${Date.now()}`;
   };
 
   const handlePlayMedia = (url: string, type: 'audio' | 'video', title: string) => {
@@ -208,6 +226,7 @@ function App() {
               getMediaUrl={getMediaUrl}
               onRenderVideo={handleRenderVideo}
               onSendAudio={handleSendAudio}
+              onSendVideo={handleSendVideo}
             />
           )}
         </main>

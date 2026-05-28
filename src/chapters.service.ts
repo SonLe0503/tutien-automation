@@ -32,6 +32,12 @@ export class ChaptersService {
       summary = await this.summarizeService.summarize(content);
     }
 
+    // 1.5 Tự động phân cảnh & tìm hình ảnh bằng AI nếu có yêu cầu
+    if ((createChapterDto as any).autoAiBuilder === true) {
+      console.log('[ChaptersService] autoAiBuilder enabled, invoking SummarizeService.autoBuildScenes...');
+      content = await this.summarizeService.autoBuildScenes(content);
+    }
+
     // 2. Lưu vào Database (chỉ lưu các trường thuộc Database Schema)
     const chapter = await this.prisma.chapter.upsert({
       where: { sourceUrl: createChapterDto.sourceUrl },
@@ -55,7 +61,8 @@ export class ChaptersService {
     } else {
       try {
         console.log(`Generating audio for chapter ${chapter.id} with speed ${speed}...`);
-        const audioBuffer = await this.ttsService.synthesize(content, speed);
+        const ttsText = content.replace(/\[\s*(?:image|img|video|media|url):\s*[^\]]+\]\s*\n?/gi, '');
+        const audioBuffer = await this.ttsService.synthesize(ttsText, speed);
         fs.writeFileSync(audioPath, audioBuffer);
 
         await this.prisma.chapter.update({
@@ -156,10 +163,10 @@ export class ChaptersService {
     const speed = options.voiceSpeed !== undefined ? options.voiceSpeed : 1.0;
     let audioPath = chapter.audioPath;
     if (!audioPath || !fs.existsSync(audioPath) || fs.statSync(audioPath).size <= 1024) {
-      console.log(`[ChaptersService] Synthesizing audio for manual video rendering...`);
       const audioDir = path.join(process.cwd(), 'audio');
       audioPath = path.join(audioDir, `${chapter.id}_speed_${speed}.mp3`);
-      const audioBuffer = await this.ttsService.synthesize(chapter.content, speed);
+      const ttsText = chapter.content.replace(/\[\s*(?:image|img|video|media|url):\s*[^\]]+\]\s*\n?/gi, '');
+      const audioBuffer = await this.ttsService.synthesize(ttsText, speed);
       fs.writeFileSync(audioPath, audioBuffer);
       
       await this.prisma.chapter.update({
@@ -188,10 +195,20 @@ export class ChaptersService {
       data: { videoPath } as any,
     });
 
-    // 5. Send to Telegram
-    const caption = `<b>🌿 MẸO SỨC KHỎE: ${chapter.title}</b>\n\n📝 ${chapter.summary}\n\n🔗 <a href="${chapter.sourceUrl}">Đọc bài viết gốc</a>`;
-    await this.telegramService.sendVideo(videoPath, caption);
-
     return updatedChapter;
+  }
+
+  async sendVideo(id: number) {
+    const chapter = await this.prisma.chapter.findUnique({
+      where: { id },
+      include: { story: true },
+    });
+    if (!chapter) throw new Error(`Chapter with ID ${id} not found`);
+    if (!chapter.videoPath) throw new Error(`No video rendered yet for chapter ${id}`);
+
+    const caption = `<b>🌿 MẸO SỨC KHỎE: ${chapter.title}</b>\n\n📝 ${chapter.summary}\n\n🔗 <a href="${chapter.sourceUrl}">Đọc bài viết gốc</a>`;
+    await this.telegramService.sendVideo(chapter.videoPath, caption);
+
+    return { success: true, id: chapter.id };
   }
 }

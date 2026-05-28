@@ -44,6 +44,15 @@ export const sendChapterAudio = async (id: number): Promise<{ success: boolean; 
   return res.json();
 };
 
+export const sendChapterVideo = async (id: number): Promise<{ success: boolean; id: number }> => {
+  const res = await fetch(`${API_BASE}/chapters/${id}/send-video`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`Send video failed: ${res.status}`);
+  return res.json();
+};
+
 export const deleteChapter = async (id: number): Promise<void> => {
   const res = await fetch(`${API_BASE}/chapters/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to delete chapter');

@@ -38,14 +38,29 @@ function parseScenes(content: string): Scene[] {
   if (paragraphs.length === 0) {
     return [{ id: crypto.randomUUID(), scriptText: content }];
   }
-  return paragraphs.map(text => ({
-    id: crypto.randomUUID(),
-    scriptText: text,
-  }));
+  return paragraphs.map(text => {
+    const match = text.match(/^\[image:\s*([^\]]+)\]\s*\n?([\s\S]*)$/);
+    if (match) {
+      return {
+        id: crypto.randomUUID(),
+        imageUrl: match[1].trim(),
+        scriptText: match[2].trim(),
+      };
+    }
+    return {
+      id: crypto.randomUUID(),
+      scriptText: text,
+    };
+  });
 }
 
 function scenesToContent(scenes: Scene[]): string {
-  return scenes.map(s => s.scriptText).join('\n\n');
+  return scenes.map(s => {
+    if (s.imageUrl && s.imageUrl.trim()) {
+      return `[image: ${s.imageUrl.trim()}]\n${s.scriptText.trim()}`;
+    }
+    return s.scriptText.trim();
+  }).join('\n\n');
 }
 
 // ─── Component ───────────────────────────────────────────────────────

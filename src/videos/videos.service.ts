@@ -97,19 +97,69 @@ export class VideosService {
         htmlContent = htmlContent.replace("font-family: 'Outfit', sans-serif;", "font-family: 'Playfair Display', serif;");
       }
 
+      // Clean content from image tags for accurate word timestamp estimation
+      const cleanContent = content.replace(/\[image:\s*[^\]]+\]\s*\n?/g, '');
+
       // 5. Generate word-level timestamps using Smart Timestamp Estimator
-      const wordsData = this.estimateWordTimestamps(content, duration);
+      const wordsData = this.estimateWordTimestamps(cleanContent, duration);
       console.log(`[VideosService] Generated ${wordsData.length} word timestamps`);
+
+      // Parse scenes from content
+      const blocks = content.split(/\n\n+/).map(s => s.trim()).filter(Boolean);
+      const scenes: { imageUrl?: string; scriptText: string }[] = [];
+      for (const block of blocks) {
+        const match = block.match(/^\[image:\s*([^\]]+)\]\s*\n?([\s\S]*)$/);
+        if (match) {
+          scenes.push({
+            imageUrl: match[1].trim(),
+            scriptText: match[2].trim(),
+          });
+        } else {
+          scenes.push({
+            scriptText: block,
+          });
+        }
+      }
+
+      // Map words to scenes to compute starts and ends
+      let wordIndex = 0;
+      const scenesData = scenes.map((scene) => {
+        const sceneWords = scene.scriptText.trim().split(/\s+/).filter(Boolean);
+        const numWords = sceneWords.length;
+        
+        let start = 0;
+        let end = 0;
+        
+        if (numWords > 0 && wordsData.length > 0) {
+          const startWord = wordsData[wordIndex];
+          const endWordIdx = Math.min(wordIndex + numWords - 1, wordsData.length - 1);
+          const endWord = wordsData[endWordIdx];
+          
+          start = startWord ? startWord.start : 0;
+          end = endWord ? endWord.end : duration;
+          
+          wordIndex += numWords;
+        }
+        
+        return {
+          imageUrl: scene.imageUrl || '',
+          scriptText: scene.scriptText,
+          start,
+          end,
+        };
+      });
 
       // 6. Inject dynamic variables into HTML
       htmlContent = htmlContent.replace('/* INJECT_WORDS_DATA */', JSON.stringify(wordsData, null, 2));
+      htmlContent = htmlContent.replace('/* INJECT_SCENES_DATA */', JSON.stringify(scenesData, null, 2));
       htmlContent = htmlContent.replace('window.__videoDuration = 10;', `window.__videoDuration = ${duration};`);
+      htmlContent = htmlContent.replace('data-duration="10"', `data-duration="${duration}"`);
       
       // Dynamically add the audio tags inside the body
       let musicVol = options?.musicVolume !== undefined ? options.musicVolume : 0.12;
-      let audioTags = `\n  <audio src="speech.mp3" data-track-index="1" data-start="0"></audio>`;
+      let audioTags = `\n  <audio id="speech" src="speech.mp3" data-track-index="1" data-start="0"></audio>`;
       if (hasMusic) {
-        audioTags += `\n  <audio src="music.mp3" data-track-index="2" data-start="0" volume="${musicVol}"></audio>`;
+        audioTags += `\n  <audio id="music" src="music.mp3" data-track-index="2" data-start="0" volume="${musicVol}"></audio>`;
       }
       audioTags += `\n</body>`;
       
